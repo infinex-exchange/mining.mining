@@ -1,6 +1,7 @@
 <?php
 
 require __DIR__.'/Plans.php';
+require __DIR__.'/PlanAssets.php';
 
 require __DIR__.'/API/PlansAPI.php';
 
@@ -10,6 +11,7 @@ class App extends Infinex\App\App {
     private $pdo;
     
     private $plans;
+    private $assets;
     
     private $plansApi;
     private $rest;
@@ -32,10 +34,17 @@ class App extends Infinex\App\App {
             $this -> pdo
         );
         
+        $this -> assets = new PlanAssets(
+            $this -> log,
+            $this -> amqp,
+            $this -> pdo
+        );
+        
         $this -> plansApi = new PlansAPI(
             $this -> log,
             $this -> amqp,
             $this -> plans,
+            $this -> assets,
             PAYMENT_ASSETID
         );
         
@@ -58,7 +67,8 @@ class App extends Infinex\App\App {
         ) -> then(
             function() use($th) {
                 return Promise\all([
-                    $th -> plans -> start()
+                    $th -> plans -> start(),
+                    $th -> assets -> start()
                 ]);
             }
         ) -> then(
@@ -78,7 +88,8 @@ class App extends Infinex\App\App {
         $th -> rest -> stop() -> then(
             function() use($th) {
                 return Promise\all([
-                    $this -> plans -> stop()
+                    $th -> plans -> stop(),
+                    $th -> assets -> stop()
                 ]);
             }
         ) -> then(

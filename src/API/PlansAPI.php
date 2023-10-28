@@ -6,12 +6,14 @@ class PlansAPI {
     private $log;
     private $amqp;
     private $plans;
+    private $assets;
     private $paymentAssetid;
     
-    function __construct($log, $amqp, $plans, $paymentAssetid) {
+    function __construct($log, $amqp, $plans, $assets, $paymentAssetid) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> plans = $plans;
+        $this -> assets = $assets;
         $this -> paymentAssetid = $paymentAssetid;
         
         $this -> log -> debug('Initialized plans API');
@@ -59,6 +61,16 @@ class PlansAPI {
         });
     }
     
+    private function ptpAsset($record, $asset) {
+        return [
+            'symbol' => $asset['symbol'],
+            'name' => $asset['name'],
+            'iconUrl' => $asset['iconUrl'],
+            'avgUnitRevenue' => $record['avgUnitRevenue'],
+            'avgPrice' => $record['avgPrice']
+        ];
+    }
+    
     private function ptpPlan($record) {
         return [
             'planid' => $record['planid'],
@@ -69,7 +81,8 @@ class PlansAPI {
             'orderMinUnits' => $record['orderMinUnits'],
             'unitPrice' => $record['unitPrice'],
             'discountPercEvery' => $record['discountPercEvery'],
-            'discountMax' => $record['discountMax']
+            'discountMax' => $record['discountMax'],
+            'assets' => $assets
         ];
     }
 }

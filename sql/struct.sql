@@ -17,30 +17,28 @@ create table mining_plans(
 GRANT SELECT, INSERT, UPDATE ON mining_plans TO "mining.mining";
 GRANT SELECT, USAGE ON mining_plans_planid_seq TO "mining.mining";
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-create table mining_assets_of_plan(
+create table plan_assets(
     planid bigint not null,
     assetid varchar(32) not null,
-    prec smallint not null,
     priority smallint not null,
     unit_avg_revenue decimal(65, 32) not null default 0,
     asset_price_avg decimal(65, 32) not null default 0,
     
     foreign key(planid) references mining_plans(planid),
-    foreign key(assetid) references assets(assetid)
+    unique(planid, assetid)
 );
+
+GRANT SELECT, INSERT, UPDATE ON plan_assets TO "mining.mining";
+
+
+
+
+
+
+
+
+
+
 
 create table mining_total_revenue(
     mtrid bigserial not null primary key,

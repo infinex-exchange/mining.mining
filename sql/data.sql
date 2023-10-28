@@ -20,22 +20,6 @@ insert into mining_plans(
     TRUE
 );
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-insert into mining_assets_of_plan(planid, assetid, prec, priority)
-values(1, 'BPX', 0, 1);
-insert into mining_assets_of_plan(planid, assetid, prec, priority)
-values(1, 'XCH', 2, 2);
+insert into plan_assets(planid, assetid, priority) values
+    (1, 'BPX', 1),
+    (1, 'XCH', 2);
