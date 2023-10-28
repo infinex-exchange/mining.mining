@@ -9,7 +9,7 @@ insert into mining_plans(
     discount_max,
     enabled
 ) values(
-    'BPX (solo) + Chia (pooled) double mining'
+    'BPX (solo) + Chia (pooled) double mining',
     60,
     'plot',
     1500,
