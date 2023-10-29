@@ -139,7 +139,7 @@ class PlansAPI {
                 });
             }
         
-        return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
+        return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th, $planAssets) {
             $assets = [];
             foreach($planAssets['assets'] as $ak => $av)
                 $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
