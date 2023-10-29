@@ -82,7 +82,7 @@ class PlansAPI {
             foreach($resp['plans'] as $k => $v) {
                 $assets = [];
                 foreach($v['assets'] as $ak => $av)
-                    $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
+                    $assets[] = $th -> ptpPlanAsset($av, $mapAssets[$av['assetid']]);
                 
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
@@ -142,7 +142,7 @@ class PlansAPI {
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th, $planAssets) {
             $assets = [];
             foreach($planAssets['assets'] as $ak => $av)
-                $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
+                $assets[] = $th -> ptpPlanAsset($av, $mapAssets[$av['assetid']]);
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
