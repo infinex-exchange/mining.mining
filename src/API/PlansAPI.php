@@ -82,13 +82,15 @@ class PlansAPI {
             foreach($resp['plans'] as $k => $v) {
                 $assets = [];
                 foreach($v['assets'] as $ak => $av)
-                    $assets[] = $th -> ptpPlanAsset($av, $mapAssets[$av['assetid']]);
+                    $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
                 
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            $resp['paymentAsset'] = $th -> ptpAsset($mapAssets[$th -> paymentAssetid]);
-            $resp['refAsset'] = $th -> ptpAsset($mapAssets[$th -> referenceAssetid]);
+            $resp['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $resp['paymentPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
+            $resp['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            $resp['refPrec'] = $mapAssets[$th -> referenceAssetid]['defaultPrec'];
             return $resp;
         });
     }
@@ -142,33 +144,26 @@ class PlansAPI {
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th, $planAssets) {
             $assets = [];
             foreach($planAssets['assets'] as $ak => $av)
-                $assets[] = $th -> ptpPlanAsset($av, $mapAssets[$av['assetid']]);
+                $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            $plan['paymentAsset'] = $th -> ptpAsset($mapAssets[$th -> paymentAssetid]);
-            $plan['refAsset'] = $th -> ptpAsset($mapAssets[$th -> referenceAssetid]);
+            $plan['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $plan['paymentPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
+            $plan['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            $plan['refPrec'] = $mapAssets[$th -> referenceAssetid]['defaultPrec'];
             return $plan;
         });
     }
     
-    private function ptpAsset($asset) {
+    private function ptpAsset($record, $asset) {
         return [
             'symbol' => $asset['symbol'],
             'name' => $asset['name'],
             'iconUrl' => $asset['iconUrl'],
-            'defaultPrec' => $asset['defaultPrec']
+            'avgUnitRevenue' => $record['avgUnitRevenue'],
+            'avgPrice' => $record['avgPrice']
         ];
-    }
-    
-    private function ptpPlanAsset($record, $asset) {
-        return array_merge(
-            $this -> ptpAsset($asset),
-            [
-                'avgUnitRevenue' => $record['avgUnitRevenue'],
-                'avgPrice' => $record['avgPrice']
-            ]
-        );
     }
     
     private function ptpPlan($record, $assets) {
