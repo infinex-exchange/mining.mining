@@ -31,33 +31,102 @@ class PlansAPI {
             'limit' => @$query['limit']
         ]);
         
-        foreach($resp['plans'] as $k => $v)
-            $resp['plans'][$k] = $this -> ptpPlan($v);
+        $promises = [];
+        $mapAssets = [];
         
-        return $this -> amqp -> call(
-            'wallet.wallet',
-            'getAsset',
-            [ 'assetid' => $this -> paymentAssetid ]
-        ) -> then(function($asset) use($resp) {
-            $resp['paymentAsset'] = $asset['symbol'];
-            return $resp;
+        foreach($resp['plans'] as $k => $v) {
+            $planAssets = $this -> assets -> getPlanAssets([
+                'planid' => $v['planid'],
+                'orderBy' => 'priority',
+                'orderDir' => 'ASC',
+                'limit' => 500
+            ]);
+            
+            $resp['plans'][$k]['assets'] = $planAssets['assets'];
+            
+            foreach($planAssets['assets'] as $ak => $av) {
+                $assetid = $av['assetid'];
+                
+                if(!array_key_exists($assetid, $mapAssets)) {
+                    $mapAssets[$assetid] = null;
+                    
+                    $promises[] = $this -> amqp -> call(
+                        'wallet.wallet',
+                        'getAsset',
+                        [ 'assetid' => $assetid ]
+                    ) -> then(function($asset) use(&$mapAssets, $assetid) {
+                        $mapAssets[$assetid] = $asset;
+                    });
+                }
+            }
+        }
+        
+        return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
+            foreach($resp['plans'] as $k => $v) {
+                $assets = [];
+                foreach($v['assets'] as $ak => $av)
+                    $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
+                
+                $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
+            }
+            
+            return $th -> amqp -> call(
+                'wallet.wallet',
+                'getAsset',
+                [ 'assetid' => $th -> paymentAssetid ]
+            ) -> then(function($asset) use($resp) {
+                $resp['paymentAsset'] = $asset['symbol'];
+                return $resp;
+            });
         });
     }
     
     public function getPlan($path, $query, $body, $auth) {
-        $voting = $this -> plans -> getPlan([
+        $resp = $this -> plans -> getPlan([
             'planid' => $path['planid']
         ]);
         
-        $resp = $this -> ptpPlan($voting);
+        $planAssets = $this -> assets -> getPlanAssets([
+            'planid' => $resp['planid'],
+            'orderBy' => 'priority',
+            'orderDir' => 'ASC',
+            'limit' => 500
+        ]);
         
-        return $this -> amqp -> call(
-            'wallet.wallet',
-            'getAsset',
-            [ 'assetid' => $this -> paymentAssetid ]
-        ) -> then(function($asset) use($resp) {
-            $resp['paymentAsset'] = $asset['symbol'];
-            return $resp;
+        $promises = [];
+        $mapAssets = [];
+        
+        foreach($planAssets['assets'] as $ak => $av) {
+            $assetid = $av['assetid'];
+            
+            if(!array_key_exists($assetid, $mapAssets)) {
+                $mapAssets[$assetid] = null;
+                
+                $promises[] = $this -> amqp -> call(
+                    'wallet.wallet',
+                    'getAsset',
+                    [ 'assetid' => $assetid ]
+                ) -> then(function($asset) use(&$mapAssets, $assetid) {
+                    $mapAssets[$assetid] = $asset;
+                });
+            }
+        }
+        
+        return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
+            $assets = [];
+            foreach($planAssets['assets'] as $ak => $av)
+                $assets[] = $th -> ptpAsset($av, $mapAssets[$av['assetid']]);
+                
+            $plan = $th -> ptpPlan($resp, $assets);
+            
+            return $this -> amqp -> call(
+                'wallet.wallet',
+                'getAsset',
+                [ 'assetid' => $th -> paymentAssetid ]
+            ) -> then(function($asset) use($plan) {
+                $plan['paymentAsset'] = $asset['symbol'];
+                return $plan;
+            });
         });
     }
     
@@ -71,7 +140,7 @@ class PlansAPI {
         ];
     }
     
-    private function ptpPlan($record) {
+    private function ptpPlan($record, $assets) {
         return [
             'planid' => $record['planid'],
             'name' => $record['name'],
