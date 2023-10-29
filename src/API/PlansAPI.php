@@ -26,6 +26,8 @@ class PlansAPI {
     }
     
     public function getAllPlans($path, $query, $body, $auth) {
+        $th = $this;
+        
         $resp = $this -> plans -> getPlans([
             'enabled' => true,
             'offset' => @$query['offset'],
@@ -83,6 +85,8 @@ class PlansAPI {
     }
     
     public function getPlan($path, $query, $body, $auth) {
+        $th = $this;
+        
         $resp = $this -> plans -> getPlan([
             'planid' => $path['planid']
         ]);
