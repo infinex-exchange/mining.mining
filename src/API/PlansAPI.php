@@ -8,15 +8,14 @@ class PlansAPI {
     private $amqp;
     private $plans;
     private $assets;
-    private $paymentAssetid;
+    private $billingAssetid;
     
-    function __construct($log, $amqp, $plans, $assets, $paymentAssetid, $referenceAssetid) {
+    function __construct($log, $amqp, $plans, $assets, $billingAssetid) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> plans = $plans;
         $this -> assets = $assets;
-        $this -> paymentAssetid = $paymentAssetid;
-        $this -> referenceAssetid = $referenceAssetid;
+        $this -> billingAssetid = $billingAssetid;
         
         $this -> log -> debug('Initialized plans API');
     }
@@ -65,18 +64,17 @@ class PlansAPI {
             }
         }
         
-        foreach([$this -> paymentAssetid, $this -> referenceAssetid] as $assetid)
-            if(!array_key_exists($assetid, $mapAssets)) {
-                $mapAssets[$assetid] = null;
-                
-                $promises[] = $this -> amqp -> call(
-                    'wallet.wallet',
-                    'getAsset',
-                    [ 'assetid' => $assetid ]
-                ) -> then(function($asset) use(&$mapAssets, $assetid) {
-                    $mapAssets[$assetid] = $asset;
-                });
-            }
+        if(!array_key_exists($this -> billingAssetid, $mapAssets)) {
+            $mapAssets[$this -> billingAssetid] = null;
+            
+            $promises[] = $this -> amqp -> call(
+                'wallet.wallet',
+                'getAsset',
+                [ 'assetid' => $this -> billingAssetid ]
+            ) -> then(function($asset) use(&$mapAssets, $th) {
+                $mapAssets[$th -> billingAssetid] = $asset;
+            });
+        }
         
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
             foreach($resp['plans'] as $k => $v) {
@@ -87,10 +85,8 @@ class PlansAPI {
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            $resp['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $resp['paymentPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
-            $resp['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
-            $resp['refPrec'] = $mapAssets[$th -> referenceAssetid]['defaultPrec'];
+            $resp['billingAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $resp['billingPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
             return $resp;
         });
     }
@@ -128,18 +124,17 @@ class PlansAPI {
             }
         }
         
-        foreach([$this -> paymentAssetid, $this -> referenceAssetid] as $assetid)
-            if(!array_key_exists($assetid, $mapAssets)) {
-                $mapAssets[$assetid] = null;
-                
-                $promises[] = $this -> amqp -> call(
-                    'wallet.wallet',
-                    'getAsset',
-                    [ 'assetid' => $assetid ]
-                ) -> then(function($asset) use(&$mapAssets, $assetid) {
-                    $mapAssets[$assetid] = $asset;
-                });
-            }
+        if(!array_key_exists($this -> billingAssetid, $mapAssets)) {
+            $mapAssets[$this -> billingAssetid] = null;
+            
+            $promises[] = $this -> amqp -> call(
+                'wallet.wallet',
+                'getAsset',
+                [ 'assetid' => $this -> billingAssetid ]
+            ) -> then(function($asset) use(&$mapAssets, $th) {
+                $mapAssets[$th -> billingAssetid] = $asset;
+            });
+        }
         
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th, $planAssets) {
             $assets = [];
@@ -148,10 +143,8 @@ class PlansAPI {
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            $plan['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $plan['paymentPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
-            $plan['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
-            $plan['refPrec'] = $mapAssets[$th -> referenceAssetid]['defaultPrec'];
+            $plan['billingAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $plan['billingPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
             return $plan;
         });
     }

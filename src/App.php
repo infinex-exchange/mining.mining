@@ -45,8 +45,7 @@ class App extends Infinex\App\App {
             $this -> amqp,
             $this -> plans,
             $this -> assets,
-            PAYMENT_ASSETID,
-            REFERENCE_ASSETID
+            BILLING_ASSETID
         );
         
         $this -> rest = new Infinex\API\REST(

@@ -13,7 +13,6 @@ define('DB_USER', 'mining.mining');
 define('DB_PASS', 'password');
 define('DB_NAME', 'mining.mining');
 
-define('PAYMENT_ASSETID', 'USDT');
-define('REFERENCE_ASSETID', 'USDT');
+define('BILLING_ASSETID', 'USDT');
 
 ?>
