@@ -87,8 +87,8 @@ class PlansAPI {
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            $resp['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $resp['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            $resp['paymentAsset'] = $th -> ptpAsset($mapAssets[$th -> paymentAssetid]);
+            $resp['refAsset'] = $th -> ptpAsset($mapAssets[$th -> referenceAssetid]);
             return $resp;
         });
     }
@@ -146,20 +146,29 @@ class PlansAPI {
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            $plan['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $plan['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            $plan['paymentAsset'] = $th -> ptpAsset($mapAssets[$th -> paymentAssetid]);
+            $plan['refAsset'] = $th -> ptpAsset($mapAssets[$th -> referenceAssetid]);
             return $plan;
         });
     }
     
-    private function ptpAsset($record, $asset) {
+    private function ptpAsset($asset) {
         return [
             'symbol' => $asset['symbol'],
             'name' => $asset['name'],
             'iconUrl' => $asset['iconUrl'],
-            'avgUnitRevenue' => $record['avgUnitRevenue'],
-            'avgPrice' => $record['avgPrice']
+            'defaultPrec' => $asset['defaultPrec']
         ];
+    }
+    
+    private function ptpPlanAsset($record, $asset) {
+        return array_merge(
+            $this -> ptpAsset($asset),
+            [
+                'avgUnitRevenue' => $record['avgUnitRevenue'],
+                'avgPrice' => $record['avgPrice']
+            ]
+        );
     }
     
     private function ptpPlan($record, $assets) {
