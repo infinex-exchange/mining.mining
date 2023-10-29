@@ -44,7 +44,7 @@ create table contracts(
 	foreign key(planid) references mining_plans(planid)
 );
 
-GRANT SELECT, INSERT ON contracts TO "mining.mining";
+GRANT SELECT, INSERT, UPDATE ON contracts TO "mining.mining";
 GRANT SELECT, USAGE ON contracts_contractid_seq TO "mining.mining";
 
 
