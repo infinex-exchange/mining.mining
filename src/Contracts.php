@@ -193,7 +193,7 @@ class Contracts {
              SET active = FALSE
              WHERE end_time < NOW()
              AND active = TRUE
-             RETURNING contractid, planid, units';
+             RETURNING contractid, planid, units'
         );
         
         while($row = $q -> fetch()) {
