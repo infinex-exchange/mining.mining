@@ -47,8 +47,7 @@ class App extends Infinex\App\App {
             $this -> log,
             $this -> amqp,
             $this -> pdo,
-            $this -> plans,
-            BILLING_ASSETID
+            $this -> plans
         );
         
         $this -> plansApi = new PlansAPI(

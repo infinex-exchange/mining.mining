@@ -5,6 +5,7 @@ use Infinex\Pagination;
 use function Infinex\Validation\validateId;
 use function Infinex\Math\trimFloat;
 use React\Promise;
+use Decimal\Decimal;
 
 class Contracts {
     private $loop;
@@ -12,23 +13,24 @@ class Contracts {
     private $amqp;
     private $pdo;
     private $plans;
-    private $billingAssetid;
     
     private $timerFinalizeContracts;
+    private $billingAsset;
     
-    function __construct($loop, $log, $amqp, $pdo, $plans, $billingAssetid) {
+    function __construct($loop, $log, $amqp, $pdo, $plans) {
         $this -> loop = $loop;
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
         $this -> plans = $plans;
-        $this -> billingAssetid = $billingAssetid;
         
         $this -> log -> debug('Initialized contracts manager');
     }
     
     public function start() {
         $th = $this;
+        
+        $this -> billingAsset = $this -> plans -> getBillingAsset();
         
         $this -> timerFinalizeContracts = $this -> loop -> addPeriodicTimer(
             300,
@@ -297,31 +299,59 @@ class Contracts {
         if($body['units'] > $plan['avblUnits'])
             throw new Error('TOO_MANY_UNITS', 'Specified amount of power units is not available', 416);
         
+        $dPrice = new Decimal($plan['unitPrice']);
+        $dPrice *= $body['units'];
+        
+        if($plan['discountPercEvery']) {
+            $dDiscountTotalPerc = new Decimal($body['units']);
+            $dDiscountTotalPerc /= $plan['discountPercEvery']);
+            $dDiscountTotalPerc = $dDiscountTotalPerc -> floor();
+            
+            if($plan['discountMax'] && $dDiscountTotalPerc > $plan['discountMax'])
+                $dDiscountTotalPerc = new Decimal($plan['discountMax']);
+            
+            $dDiscountFactor = new Decimal(100);
+            $dDiscountFactor -= $dDiscountTotalPerc;
+            
+            $dPrice = $dPrice * $dDiscountFactor / 100;
+            $dPrice = $dPrice -> round($this -> billingAsset['defaultPrec']);
+        }
+        
+        $strPrice = trimFloat($dPrice -> toFixed($this -> billingAsset['defaultPrec']);
+        
         return $this -> amqp -> call(
             'wallet.wallet',
             'lock',
             [
                 'uid' => @$body['uid'],
-                'assetid' => $this -> billingAssetid,
-                'amount' => //////
+                'assetid' => $this -> billingAsset['assetid'],
+                'amount' => $strPrice,
                 'reason' => 'MINING_BUY_CONTRACT'
             ]
-        ) -> then(function($lock) use($th, $body) {
+        ) -> then(function($lock) use($th, $body, $strPrice) {
             try {
                 $resp = $th -> createContract([
                     'planid' => $body['planid'],
                     'uid' => $body['uid'],
                     'units' => $body['units'],
-                    'pricePaid' => ///////
+                    'pricePaid' => $strPrice,
                     'paymentLockid' => $lock['lockid']
                 ]);
                 
-                // commit lock
+                $th -> amqp -> call(
+                    'wallet.wallet',
+                    'commit',
+                    [ 'lockid' => $lock['lockid'] ]
+                );
                 
                 return $resp;
             }
             catch(Error $e) {
-                // release lock
+                $th -> amqp -> call(
+                    'wallet.wallet',
+                    'release',
+                    [ 'lockid' => $lock['lockid'] ]
+                );
                 
                 throw $e;
             }
