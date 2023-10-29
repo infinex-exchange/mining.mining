@@ -10,11 +10,11 @@ insert into mining_plans(
     enabled
 ) values(
     'BPX (solo) + Chia (pooled) double mining',
-    60,
+    72,
     'plot',
     1500,
     10,
-    1.88,
+    1.7,
     20,
     30,
     TRUE
