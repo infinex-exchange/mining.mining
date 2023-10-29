@@ -154,6 +154,7 @@ class PlansAPI {
             'symbol' => $asset['symbol'],
             'name' => $asset['name'],
             'iconUrl' => $asset['iconUrl'],
+            'prec' => $asset['defaultPrec'],
             'avgUnitRevenue' => $record['avgUnitRevenue'],
             'avgPrice' => $record['avgPrice']
         ];
