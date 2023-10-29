@@ -11,14 +11,18 @@ class Contracts {
     private $log;
     private $amqp;
     private $pdo;
+    private $plans;
+    private $billingAssetid;
     
     private $timerFinalizeContracts;
     
-    function __construct($loop, $log, $amqp, $pdo) {
+    function __construct($loop, $log, $amqp, $pdo, $plans, $billingAssetid) {
         $this -> loop = $loop;
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> plans = $plans;
+        $this -> billingAssetid = $billingAssetid;
         
         $this -> log -> debug('Initialized contracts manager');
     }
@@ -167,6 +171,161 @@ class Contracts {
             throw new Error('NOT_FOUND', 'Contract '.$body['contractid'].' not found', 404);
             
         return $this -> rtrContract($row);
+    }
+    
+    public function createContract($body) {
+        if(!isset($body['planid']))
+            throw new Error('MISSING_DATA', 'planid', 400);
+        if(!isset($body['uid']))
+            throw new Error('MISSING_DATA', 'uid');
+        if(!isset($body['units']))
+            throw new Error('MISSING_DATA', 'units');
+        if(!isset($body['pricePaid']))
+            throw new Error('MISSING_DATA', 'pricePaid');
+        
+        if(!validateId($body['planid']))
+            throw new Error('VALIDATION_ERROR', 'planid', 400);
+        if(!validateId($body['uid']))
+            throw new Error('VALIDATION_ERROR', 'uid');
+        if(!is_int($body['units']) || $body['units'] < 1)
+            throw new Error('VALIDATION_ERROR', 'units', 400);
+        if(!validateFloat($body['pricePaid']))
+            throw new Error('VALIDATION_ERROR', 'pricePaid');
+        
+        if(isset($body['paymentLockid']) && !validateId($body['paymentLockid']))
+            throw new Error('VALIDATION_ERROR', 'paymentLockid');
+        
+        $this -> pdo -> beginTransaction();
+        
+        $task = [
+            ':planid' => $body['planid']
+        ];
+        
+        $sql = 'SELECT total_units,
+                       sold_units,
+                       months
+                FROM mining_plans
+                WHERE planid = :planid
+                FOR UPDATE';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $plan = $q -> fetch();
+        
+        if(!$plan) {
+            $this -> pdo -> rollBack();
+            throw new Error('NOT_FOUND', 'Plan '.$body['planid'].' not found');
+        }
+        
+        $avblUnits = $plan['total_units'] - $plan['sold_units'];
+        if($body['units'] > $avblUnits) {
+            $this -> pdo -> rollBack();
+            throw new Error('TOO_MANY_UNITS', 'Specified amount of power units is not available', 416);
+        }
+        
+        $task = [
+            ':planid' = $body['planid'],
+            ':units' = $body['units']
+        ];
+        
+        $sql = 'UPDATE mining_plans
+                SET sold_units = sold_units + :units
+                WHERE planid = :planid';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        
+        $task = [
+            ':planid' => $body['planid'],
+            ':uid' => $body['uid'],
+            ':units' => $body['units'],
+            ':price_paid' => $body['pricePaid'],
+            ':payment_lockid' => @$body['paymentLockid'],
+            ':interval' => $plan['months'].' months'
+        ];
+        
+        $sql = 'INSERT INTO contracts(
+                    planid,
+                    uid,
+                    units,
+                    price_paid,
+                    payment_lockid,
+                    begin_time,
+                    end_time,
+                    active
+                ) VALUES (
+                    :planid,
+                    :uid,
+                    :price_paid,
+                    :payment_lockid,
+                    NOW(),
+                    NOW() + INTERVAL :interval,
+                    TRUE
+                )
+                RETURNING contractid';
+        
+        $q = $this -> pdo -> prepare($sql);
+        $q -> execute($task);
+        $row = $q -> fetch();
+        
+        $this -> pdo -> commit();
+        
+        return [
+            'contractid' => $row['contractid']
+        ];
+    }
+    
+    public function buyContract($body) {
+        $th = $this;
+        
+        if(!isset($body['units']))
+            throw new Error('MISSING_DATA', 'units');
+            
+        if(!is_int($body['units']) || $body['units'] < 1)
+            throw new Error('VALIDATION_ERROR', 'units', 400);
+        
+        $plan = $this -> getPlan([
+            'planid' => @$body['planid']
+        ]);
+        
+        if(!$plan['enabled'])
+            throw new Error('FORBIDDEN', 'Plan '.$body['planid'].' is out of service');
+        
+        if($body['units'] < $plan['orderMinUnits'])
+            throw new Error('TOO_FEW_UNITS', 'Specified amount of power units is less than minimal order amount', 416);
+        
+        if($body['units'] > $plan['avblUnits'])
+            throw new Error('TOO_MANY_UNITS', 'Specified amount of power units is not available', 416);
+        
+        return $this -> amqp -> call(
+            'wallet.wallet',
+            'lock',
+            [
+                'uid' => @$body['uid'],
+                'assetid' => $this -> billingAssetid,
+                'amount' => //////
+                'reason' => 'MINING_BUY_CONTRACT'
+            ]
+        ) -> then(function($lock) use($th, $body) {
+            try {
+                $resp = $th -> createContract([
+                    'planid' => $body['planid'],
+                    'uid' => $body['uid'],
+                    'units' => $body['units'],
+                    'pricePaid' => ///////
+                    'paymentLockid' => $lock['lockid']
+                ]);
+                
+                // commit lock
+                
+                return $resp;
+            }
+            catch(Error $e) {
+                // release lock
+                
+                throw $e;
+            }
+        });
     }
     
     private function rtrContract($row) {

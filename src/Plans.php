@@ -153,6 +153,7 @@ class Plans {
             'unitName' => $row['unit_name'],
             'totalUnits' => $row['total_units'],
             'soldUnits' => $row['sold_units'],
+            'avblUnits' => $row['total_units'] - $row['sold_units'],
             'orderMinUnits' => $row['min_ord_units'],
             'unitPrice' => trimFloat($row['unit_price']),
             'discountPercEvery' => $row['discount_perc_every'],

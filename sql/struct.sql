@@ -36,7 +36,7 @@ create table contracts(
 	uid bigint not null,
 	units bigint not null,
 	price_paid decimal(65, 32) not null,
-    payment_lockid bigint not null,
+    payment_lockid bigint,
 	begin_time timestamptz not null,
 	end_time timestamptz not null,
 	active boolean not null default TRUE,

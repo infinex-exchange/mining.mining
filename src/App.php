@@ -46,7 +46,9 @@ class App extends Infinex\App\App {
             $this -> loop,
             $this -> log,
             $this -> amqp,
-            $this -> pdo
+            $this -> pdo,
+            $this -> plans,
+            BILLING_ASSETID
         );
         
         $this -> plansApi = new PlansAPI(
@@ -77,9 +79,12 @@ class App extends Infinex\App\App {
             function() use($th) {
                 return Promise\all([
                     $th -> plans -> start(),
-                    $th -> assets -> start(),
-                    $th -> contracts -> start()
+                    $th -> assets -> start()
                 ]);
+            }
+        ) -> then(
+            function() use($th) {
+                return $th -> contracts -> start();
             }
         ) -> then(
             function() use($th) {
@@ -97,10 +102,13 @@ class App extends Infinex\App\App {
         
         $th -> rest -> stop() -> then(
             function() use($th) {
+                return $th -> contracts -> stop();
+            }
+        ) -> then(
+            function() use($th) {
                 return Promise\all([
                     $th -> plans -> stop(),
-                    $th -> assets -> stop(),
-                    $th -> contracts -> stop()
+                    $th -> assets -> stop()
                 ]);
             }
         ) -> then(

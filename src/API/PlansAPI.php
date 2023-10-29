@@ -166,7 +166,7 @@ class PlansAPI {
             'name' => $record['name'],
             'months' => $record['months'],
             'unitName' => $record['unitName'],
-            'avblUnits' => $record['totalUnits'] - $record['soldUnits'],
+            'avblUnits' => $record['avblUnits'],
             'orderMinUnits' => $record['orderMinUnits'],
             'unitPrice' => $record['unitPrice'],
             'discountPercEvery' => $record['discountPercEvery'],
