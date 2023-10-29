@@ -85,8 +85,8 @@ class PlansAPI {
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            $resp['billingAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $resp['billingPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
+            $resp['billingAsset'] = $mapAssets[$th -> billingAssetid]['symbol'];
+            $resp['billingPrec'] = $mapAssets[$th -> billingAssetid]['defaultPrec'];
             return $resp;
         });
     }
@@ -143,8 +143,8 @@ class PlansAPI {
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            $plan['billingAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
-            $plan['billingPrec'] = $mapAssets[$th -> paymentAssetid]['defaultPrec'];
+            $plan['billingAsset'] = $mapAssets[$th -> billingAssetid]['symbol'];
+            $plan['billingPrec'] = $mapAssets[$th -> billingAssetid]['defaultPrec'];
             return $plan;
         });
     }
