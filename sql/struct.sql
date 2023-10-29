@@ -30,6 +30,24 @@ create table plan_assets(
 
 GRANT SELECT, INSERT, UPDATE ON plan_assets TO "mining.mining";
 
+create table contracts(
+	contractid bigserial not null primary key,
+	planid bigint not null,
+	uid bigint not null,
+	units bigint not null,
+	price_paid decimal(65, 32) not null,
+    payment_lockid bigint not null,
+	begin_time timestamptz not null,
+	end_time timestamptz not null,
+	active boolean not null default TRUE,
+	
+	foreign key(planid) references mining_plans(planid)
+);
+
+GRANT SELECT, INSERT ON contracts TO "mining.mining";
+GRANT SELECT, USAGE ON contracts_contractid_seq TO "mining.mining";
+
+
 
 
 
@@ -50,21 +68,6 @@ create table mining_total_revenue(
 	
 	foreign key(assetid) references assets(assetid),
 	foreign key(depo_xid) references wallet_transactions(xid)
-);
-
-create table mining_contracts(
-	contractid bigserial not null primary key,
-	planid bigint not null,
-	uid bigint not null,
-	units bigint not null,
-	price_paid decimal(65, 32) not null,
-    payment_xid bigint not null,
-	create_time timestamptz not null,
-	end_time timestamptz not null,
-	
-	foreign key(planid) references mining_plans(planid),
-	foreign key(uid) references users(uid),
-    foreign key(payment_xid) references wallet_transactions(xid)
 );
 
 create table mining_contract_revenue_sum(
