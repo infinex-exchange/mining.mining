@@ -10,12 +10,13 @@ class PlansAPI {
     private $assets;
     private $paymentAssetid;
     
-    function __construct($log, $amqp, $plans, $assets, $paymentAssetid) {
+    function __construct($log, $amqp, $plans, $assets, $paymentAssetid, $referenceAssetid) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> plans = $plans;
         $this -> assets = $assets;
         $this -> paymentAssetid = $paymentAssetid;
+        $this -> referenceAssetid = $referenceAssetid;
         
         $this -> log -> debug('Initialized plans API');
     }
@@ -64,6 +65,19 @@ class PlansAPI {
             }
         }
         
+        foreach([$this -> paymentAssetid, $this -> referenceAssetid] as $assetid)
+            if(!array_key_exists($assetid, $mapAssets)) {
+                $mapAssets[$assetid] = null;
+                
+                $promises[] = $this -> amqp -> call(
+                    'wallet.wallet',
+                    'getAsset',
+                    [ 'assetid' => $assetid ]
+                ) -> then(function($asset) use(&$mapAssets, $assetid) {
+                    $mapAssets[$assetid] = $asset;
+                });
+            }
+        
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
             foreach($resp['plans'] as $k => $v) {
                 $assets = [];
@@ -73,14 +87,9 @@ class PlansAPI {
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            return $th -> amqp -> call(
-                'wallet.wallet',
-                'getAsset',
-                [ 'assetid' => $th -> paymentAssetid ]
-            ) -> then(function($asset) use($resp) {
-                $resp['paymentAsset'] = $asset['symbol'];
-                return $resp;
-            });
+            $resp['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $resp['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            return $resp;
         });
     }
     
@@ -117,6 +126,19 @@ class PlansAPI {
             }
         }
         
+        foreach([$this -> paymentAssetid, $this -> referenceAssetid] as $assetid)
+            if(!array_key_exists($assetid, $mapAssets)) {
+                $mapAssets[$assetid] = null;
+                
+                $promises[] = $this -> amqp -> call(
+                    'wallet.wallet',
+                    'getAsset',
+                    [ 'assetid' => $assetid ]
+                ) -> then(function($asset) use(&$mapAssets, $assetid) {
+                    $mapAssets[$assetid] = $asset;
+                });
+            }
+        
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
             $assets = [];
             foreach($planAssets['assets'] as $ak => $av)
@@ -124,14 +146,9 @@ class PlansAPI {
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            return $this -> amqp -> call(
-                'wallet.wallet',
-                'getAsset',
-                [ 'assetid' => $th -> paymentAssetid ]
-            ) -> then(function($asset) use($plan) {
-                $plan['paymentAsset'] = $asset['symbol'];
-                return $plan;
-            });
+            $plan['paymentAsset'] = $mapAssets[$th -> paymentAssetid]['symbol'];
+            $plan['refAsset'] = $mapAssets[$th -> referenceAssetid]['symbol'];
+            return $plan;
         });
     }
     
