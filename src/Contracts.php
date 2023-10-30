@@ -226,8 +226,8 @@ class Contracts {
         }
         
         $task = [
-            ':planid' = $body['planid'],
-            ':units' = $body['units']
+            ':planid' => $body['planid'],
+            ':units' => $body['units']
         ];
         
         $sql = 'UPDATE mining_plans
