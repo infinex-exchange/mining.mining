@@ -304,7 +304,7 @@ class Contracts {
         
         if($plan['discountPercEvery']) {
             $dDiscountTotalPerc = new Decimal($body['units']);
-            $dDiscountTotalPerc /= $plan['discountPercEvery']);
+            $dDiscountTotalPerc /= $plan['discountPercEvery'];
             $dDiscountTotalPerc = $dDiscountTotalPerc -> floor();
             
             if($plan['discountMax'] && $dDiscountTotalPerc > $plan['discountMax'])
