@@ -317,7 +317,7 @@ class Contracts {
             $dPrice = $dPrice -> round($this -> billingAsset['defaultPrec']);
         }
         
-        $strPrice = trimFloat($dPrice -> toFixed($this -> billingAsset['defaultPrec']);
+        $strPrice = trimFloat($dPrice -> toFixed($this -> billingAsset['defaultPrec']));
         
         return $this -> amqp -> call(
             'wallet.wallet',
