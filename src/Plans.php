@@ -10,11 +10,15 @@ class Plans {
     private $log;
     private $amqp;
     private $pdo;
+    private $billingAssetid;
     
-    function __construct($log, $amqp, $pdo) {
+    private $billingAsset;
+    
+    function __construct($log, $amqp, $pdo, $billingAssetid) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> pdo = $pdo;
+        $this -> billingAssetid = $billingAssetid;
         
         $this -> log -> debug('Initialized plans manager');
     }
@@ -22,28 +26,36 @@ class Plans {
     public function start() {
         $th = $this;
         
-        $promises = [];
+        return $this -> amqp -> call(
+            'wallet.wallet',
+            'getAsset',
+            [ 'assetid' => $this -> billingAssetid ]
+        ) -> then(function($billingAsset) use($th) {
+            $th -> billingAsset = $billingAsset;
         
-        $promises[] = $this -> amqp -> method(
-            'getPlans',
-            [$this, 'getPlans']
-        );
-        
-        $promises[] = $this -> amqp -> method(
-            'getPlan',
-            [$this, 'getPlan']
-        );
-        
-        return Promise\all($promises) -> then(
-            function() use($th) {
-                $th -> log -> info('Started plans manager');
-            }
-        ) -> catch(
-            function($e) use($th) {
-                $th -> log -> error('Failed to start plans manager: '.((string) $e));
-                throw $e;
-            }
-        );
+            $promises = [];
+            
+            $promises[] = $this -> amqp -> method(
+                'getPlans',
+                [$this, 'getPlans']
+            );
+            
+            $promises[] = $this -> amqp -> method(
+                'getPlan',
+                [$this, 'getPlan']
+            );
+            
+            return Promise\all($promises) -> then(
+                function() use($th) {
+                    $th -> log -> info('Started plans manager');
+                }
+            ) -> catch(
+                function($e) use($th) {
+                    $th -> log -> error('Failed to start plans manager: '.((string) $e));
+                    throw $e;
+                }
+            );
+        });
     }
     
     public function stop() {
@@ -63,6 +75,13 @@ class Plans {
                 $th -> log -> error('Failed to stop plans manager: '.((string) $e));
             }
         );
+    }
+    
+    public function getBillingAsset() {
+        if(!$this -> billingAsset)
+            throw new Error('UNKNOWN', 'Billing asset not resolved');
+        
+        return $this -> billingAsset;
     }
     
     public function getPlans($body) {

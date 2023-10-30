@@ -33,7 +33,8 @@ class App extends Infinex\App\App {
         $this -> plans = new Plans(
             $this -> log,
             $this -> amqp,
-            $this -> pdo
+            $this -> pdo,
+            BILLING_ASSETID
         );
         
         $this -> assets = new PlanAssets(
@@ -54,8 +55,7 @@ class App extends Infinex\App\App {
             $this -> log,
             $this -> amqp,
             $this -> plans,
-            $this -> assets,
-            BILLING_ASSETID
+            $this -> assets
         );
         
         $this -> rest = new Infinex\API\REST(

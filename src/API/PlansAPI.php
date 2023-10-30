@@ -8,14 +8,12 @@ class PlansAPI {
     private $amqp;
     private $plans;
     private $assets;
-    private $billingAssetid;
     
-    function __construct($log, $amqp, $plans, $assets, $billingAssetid) {
+    function __construct($log, $amqp, $plans, $assets) {
         $this -> log = $log;
         $this -> amqp = $amqp;
         $this -> plans = $plans;
         $this -> assets = $assets;
-        $this -> billingAssetid = $billingAssetid;
         
         $this -> log -> debug('Initialized plans API');
     }
@@ -64,18 +62,6 @@ class PlansAPI {
             }
         }
         
-        if(!array_key_exists($this -> billingAssetid, $mapAssets)) {
-            $mapAssets[$this -> billingAssetid] = null;
-            
-            $promises[] = $this -> amqp -> call(
-                'wallet.wallet',
-                'getAsset',
-                [ 'assetid' => $this -> billingAssetid ]
-            ) -> then(function($asset) use(&$mapAssets, $th) {
-                $mapAssets[$th -> billingAssetid] = $asset;
-            });
-        }
-        
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th) {
             foreach($resp['plans'] as $k => $v) {
                 $assets = [];
@@ -122,18 +108,6 @@ class PlansAPI {
                     $mapAssets[$assetid] = $asset;
                 });
             }
-        }
-        
-        if(!array_key_exists($this -> billingAssetid, $mapAssets)) {
-            $mapAssets[$this -> billingAssetid] = null;
-            
-            $promises[] = $this -> amqp -> call(
-                'wallet.wallet',
-                'getAsset',
-                [ 'assetid' => $this -> billingAssetid ]
-            ) -> then(function($asset) use(&$mapAssets, $th) {
-                $mapAssets[$th -> billingAssetid] = $asset;
-            });
         }
         
         return Promise\all($promises) -> then(function() use(&$mapAssets, $resp, $th, $planAssets) {
