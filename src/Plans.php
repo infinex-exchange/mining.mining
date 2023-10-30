@@ -32,6 +32,7 @@ class Plans {
             [ 'assetid' => $this -> billingAssetid ]
         ) -> then(function($billingAsset) use($th) {
             $th -> billingAsset = $billingAsset;
+            $th -> log -> debug('Resolved billing asset');
         
             $promises = [];
             
