@@ -32,6 +32,10 @@ class PlansAPI {
             'limit' => @$query['limit']
         ]);
         
+        $ba = $this -> plans -> getBillingAsset();
+        $resp['billingAsset'] = $ba['symbol'];
+        $resp['billingPrec'] = $ba['defaultPrec'];
+        
         $promises = [];
         $mapAssets = [];
         
@@ -71,8 +75,6 @@ class PlansAPI {
                 $resp['plans'][$k] = $th -> ptpPlan($v, $assets);
             }
             
-            $resp['billingAsset'] = $mapAssets[$th -> billingAssetid]['symbol'];
-            $resp['billingPrec'] = $mapAssets[$th -> billingAssetid]['defaultPrec'];
             return $resp;
         });
     }
@@ -117,8 +119,9 @@ class PlansAPI {
                 
             $plan = $th -> ptpPlan($resp, $assets);
             
-            $plan['billingAsset'] = $mapAssets[$th -> billingAssetid]['symbol'];
-            $plan['billingPrec'] = $mapAssets[$th -> billingAssetid]['defaultPrec'];
+            $ba = $this -> plans -> getBillingAsset();
+            $plan['billingAsset'] = $ba['symbol'];
+            $plan['billingPrec'] = $ba['defaultPrec'];
             return $plan;
         });
     }
